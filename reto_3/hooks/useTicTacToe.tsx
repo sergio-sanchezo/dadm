@@ -1,129 +1,256 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
+type Board = string[][];
+type Player = 'X' | 'O' | 'none';
+type GameState = {
+    board: Board;
+    score: number;
+};
+
 export const useTicTacToe = () => {
-  const [board, setBoard] = useState<string[][]>([
-    ['', '', ''],
-    ['', '', ''],
-    ['', '', ''],
-  ]);
-  const [currentPlayer, setCurrentPlayer] = useState("none");
-  const [winner, setWinner] = useState<string | null>(null);
-  const [score, setScore] = useState({ human: 0, computer: 0, draws: 0 });
-  const [isHumanTurn, setIsHumanTurn] = useState(true);
-  const [gameStarted, setGameStarted] = useState(false);
-
-  const resetGame = () => {
-    setBoard([
-      ['', '', ''],
-      ['', '', ''],
-      ['', '', ''],
+    const [board, setBoard] = useState<Board>([
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
     ]);
-    setWinner(null);
-    setCurrentPlayer("none");
-    setIsHumanTurn(true);
-    setGameStarted(false);
-  };
+    const [currentPlayer, setCurrentPlayer] = useState<Player>('none');
+    const [winner, setWinner] = useState<string | null>(null);
+    const [score, setScore] = useState({ human: 0, computer: 0, draws: 0 });
+    const [isHumanTurn, setIsHumanTurn] = useState(true);
+    const [gameStarted, setGameStarted] = useState(false);
 
-  const checkWinner = (newBoard: string[][]) => {
-    const lines = [
-      [newBoard[0][0], newBoard[0][1], newBoard[0][2]],
-      [newBoard[1][0], newBoard[1][1], newBoard[1][2]],
-      [newBoard[2][0], newBoard[2][1], newBoard[2][2]],
-      [newBoard[0][0], newBoard[1][0], newBoard[2][0]],
-      [newBoard[0][1], newBoard[1][1], newBoard[2][1]],
-      [newBoard[0][2], newBoard[1][2], newBoard[2][2]],
-      [newBoard[0][0], newBoard[1][1], newBoard[2][2]],
-      [newBoard[0][2], newBoard[1][1], newBoard[2][0]],
+    // Optimized winner check using pre-computed win patterns
+    const WIN_PATTERNS = [
+        [
+            [0, 0],
+            [0, 1],
+            [0, 2],
+        ], // Top row
+        [
+            [1, 0],
+            [1, 1],
+            [1, 2],
+        ], // Middle row
+        [
+            [2, 0],
+            [2, 1],
+            [2, 2],
+        ], // Bottom row
+        [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+        ], // Left column
+        [
+            [0, 1],
+            [1, 1],
+            [2, 1],
+        ], // Middle column
+        [
+            [0, 2],
+            [1, 2],
+            [2, 2],
+        ], // Right column
+        [
+            [0, 0],
+            [1, 1],
+            [2, 2],
+        ], // Diagonal
+        [
+            [0, 2],
+            [1, 1],
+            [2, 0],
+        ], // Anti-diagonal
     ];
-    for (let line of lines) {
-      if (line[0] !== '' && line[0] === line[1] && line[1] === line[2]) {
-        return line[0];
-      }
-    }
-    if (newBoard.every(row => row.every(cell => cell !== ''))) {
-      return 'draw';
-    }
-    return null;
-  };
 
-  const makeMove = (row: number, col: number) => {
-    if (board[row][col] || winner || !isHumanTurn || !gameStarted) return;
-    const newBoard = board.map((r, i) => (i === row ? r.map((c, j) => (j === col ? currentPlayer : c)) : r));
-    setBoard(newBoard);
-    const newWinner = checkWinner(newBoard);
-    if (newWinner) {
-      handleWinner(newWinner);
-    } else {
-      toggleTurn();
-      if (currentPlayer === 'X') {
-        makeComputerMove(newBoard);
-      }
-    }
-  };
-
-  const handleWinner = (newWinner: string) => {
-    setWinner(newWinner);
-    setGameStarted(false);
-
-    let winnerName = newWinner === 'X' ? 'Jugador' : 'Maquina';
-
-    Alert.alert(
-      newWinner === 'draw' ? '¡Es un empate!' : `¡${winnerName} gana!`,
-      'Presiona reiniciar para jugar de nuevo.',
-      [{ text: 'OK' }]
-    );
-    
-    if (newWinner === 'draw') {
-      setScore(prev => ({ ...prev, draws: prev.draws + 1 }));
-    } else if (newWinner === 'X') {
-      setScore(prev => ({ ...prev, human: prev.human + 1 }));
-    } else {
-      setScore(prev => ({ ...prev, computer: prev.computer + 1 }));
-    }
-  };
-
-  const toggleTurn = () => {
-    setCurrentPlayer(prev => (prev === 'X' ? 'O' : 'X'));
-    setIsHumanTurn(prev => !prev);
-  };
-
-  const makeComputerMove = (newBoard: string[][]) => {
-    // Random AI
-    // Basic AI move logic
-    for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-            if (!newBoard[i][j]) {
-                const updatedBoard = newBoard.map((r, rowIndex) =>
-                rowIndex === i ? r.map((cell, colIndex) => (colIndex === j ? 'O' : cell)) : r
-                );
-                setBoard(updatedBoard);
-                const newWinner = checkWinner(updatedBoard);
-                if (newWinner) {
-                handleWinner(newWinner);
-                } else {
-                toggleTurn();
-                }
-            return;
+    const checkWinner = (gameBoard: Board): string | null => {
+        for (const pattern of WIN_PATTERNS) {
+            const [a, b, c] = pattern;
+            const value = gameBoard[a[0]][a[1]];
+            if (
+                value &&
+                value === gameBoard[b[0]][b[1]] &&
+                value === gameBoard[c[0]][c[1]]
+            ) {
+                return value;
             }
         }
-    }    
-  };
 
+        return gameBoard.every((row) => row.every((cell) => cell !== ''))
+            ? 'draw'
+            : null;
+    };
 
-  const chooseStartingPlayer = (player: string) => {
-    resetGame();
-    setCurrentPlayer(player);
-    setIsHumanTurn(player === 'X');
-    setGameStarted(true);
-    if (player === 'O') {
-      makeComputerMove([
-        ['', '', ''],
-        ['', '', ''],
-        ['', '', ''],
-      ]);
-    }
-  };
+    const getEmptyCells = (gameBoard: Board): [number, number][] => {
+        const cells: [number, number][] = [];
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (!gameBoard[i][j]) cells.push([i, j]);
+            }
+        }
+        return cells;
+    };
 
-  return { board, makeMove, resetGame, currentPlayer, winner, score, chooseStartingPlayer };
+    // Minimax algorithm implementation
+    const minimax = (
+        gameBoard: Board,
+        depth: number,
+        isMaximizing: boolean,
+        alpha: number = -Infinity,
+        beta: number = Infinity
+    ): GameState => {
+        const result = checkWinner(gameBoard);
+
+        if (result === 'O') return { board: gameBoard, score: 10 - depth };
+        if (result === 'X') return { board: gameBoard, score: depth - 10 };
+        if (result === 'draw') return { board: gameBoard, score: 0 };
+
+        const emptyCells = getEmptyCells(gameBoard);
+
+        if (isMaximizing) {
+            let bestScore = -Infinity;
+            let bestBoard = gameBoard;
+
+            for (const [i, j] of emptyCells) {
+                const newBoard = gameBoard.map((row) => [...row]);
+                newBoard[i][j] = 'O';
+                const { score } = minimax(
+                    newBoard,
+                    depth + 1,
+                    false,
+                    alpha,
+                    beta
+                );
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestBoard = newBoard;
+                }
+                alpha = Math.max(alpha, bestScore);
+                if (beta <= alpha) break;
+            }
+
+            return { board: bestBoard, score: bestScore };
+        } else {
+            let bestScore = Infinity;
+            let bestBoard = gameBoard;
+
+            for (const [i, j] of emptyCells) {
+                const newBoard = gameBoard.map((row) => [...row]);
+                newBoard[i][j] = 'X';
+                const { score } = minimax(
+                    newBoard,
+                    depth + 1,
+                    true,
+                    alpha,
+                    beta
+                );
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestBoard = newBoard;
+                }
+                beta = Math.min(beta, bestScore);
+                if (beta <= alpha) break;
+            }
+
+            return { board: bestBoard, score: bestScore };
+        }
+    };
+
+    const makeMove = (row: number, col: number) => {
+        if (board[row][col] || winner || !isHumanTurn || !gameStarted) return;
+
+        const newBoard = board.map((r, i) =>
+            i === row ? r.map((c, j) => (j === col ? currentPlayer : c)) : r
+        );
+        setBoard(newBoard);
+
+        const newWinner = checkWinner(newBoard);
+        if (newWinner) {
+            handleWinner(newWinner);
+        } else {
+            toggleTurn();
+            if (currentPlayer === 'X') {
+                setTimeout(() => makeComputerMove(newBoard), 500);
+            }
+        }
+    };
+
+    const makeComputerMove = (currentBoard: Board) => {
+        const { board: bestBoard } = minimax(currentBoard, 0, true);
+        setBoard(bestBoard);
+
+        const newWinner = checkWinner(bestBoard);
+        if (newWinner) {
+            handleWinner(newWinner);
+        } else {
+            toggleTurn();
+        }
+    };
+
+    const handleWinner = (newWinner: string) => {
+        setWinner(newWinner);
+        setGameStarted(false);
+
+        const winnerName = newWinner === 'X' ? 'Jugador' : 'Maquina';
+
+        Alert.alert(
+            newWinner === 'draw' ? '¡Es un empate!' : `¡${winnerName} gana!`,
+            'Presiona reiniciar para jugar de nuevo.',
+            [{ text: 'OK' }]
+        );
+
+        setScore((prev) => ({
+            ...prev,
+            ...(newWinner === 'draw'
+                ? { draws: prev.draws + 1 }
+                : newWinner === 'X'
+                  ? { human: prev.human + 1 }
+                  : { computer: prev.computer + 1 }),
+        }));
+    };
+
+    const toggleTurn = () => {
+        setCurrentPlayer((prev) => (prev === 'X' ? 'O' : 'X'));
+        setIsHumanTurn((prev) => !prev);
+    };
+
+    const resetGame = () => {
+        setBoard([
+            ['', '', ''],
+            ['', '', ''],
+            ['', '', ''],
+        ]);
+        setWinner(null);
+        setCurrentPlayer('none');
+        setIsHumanTurn(true);
+        setGameStarted(false);
+    };
+
+    const chooseStartingPlayer = (player: Player) => {
+        resetGame();
+        setCurrentPlayer(player);
+        setIsHumanTurn(player === 'X');
+        setGameStarted(true);
+
+        if (player === 'O') {
+            makeComputerMove([
+                ['', '', ''],
+                ['', '', ''],
+                ['', '', ''],
+            ]);
+        }
+    };
+
+    return {
+        board,
+        makeMove,
+        resetGame,
+        currentPlayer,
+        winner,
+        score,
+        chooseStartingPlayer,
+    };
 };
