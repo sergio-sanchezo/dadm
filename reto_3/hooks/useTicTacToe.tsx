@@ -252,5 +252,6 @@ export const useTicTacToe = () => {
         winner,
         score,
         chooseStartingPlayer,
+        gameStarted,
     };
 };
